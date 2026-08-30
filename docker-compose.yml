@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    image: claude-code-on-ec2-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "8000"
+
+  web:
+    build: ./frontend
+    image: claude-code-on-ec2-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"

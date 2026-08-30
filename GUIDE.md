@@ -141,6 +141,24 @@ drop `restore_test` if this was just a verification run.
    The `certbot` service keeps running and renews the cert automatically
    every 12 hours.
 
+## Elastic IP
+
+This instance has an Elastic IP attached (not just its default auto-assigned
+public IP), specifically so it survives a **stop/start** — a plain public
+IPv4 is only guaranteed to stay the same across a *reboot*, not a stop/start,
+which would otherwise silently break DNS. Elastic IPs are free while
+attached to a running instance, but AWS charges a small hourly fee while
+it's attached to a *stopped* one — trivial for occasional overnight stops,
+but worth knowing.
+
+If this Elastic IP is ever released and a new one associated instead
+(or if you're setting this up fresh), update it in **all** of these places
+— it's easy to only remember the obvious one:
+- The DNS A record at your registrar
+- `.env`'s `ALLOWED_ORIGINS`
+- The `EC2_HOST` GitHub Actions secret (used by the CI/CD deploy workflow) —
+  easy to forget since it's not in any file in this repo
+
 ## Troubleshooting notes
 
 - **Healthchecks using `localhost` inside a container can fail spuriously**:

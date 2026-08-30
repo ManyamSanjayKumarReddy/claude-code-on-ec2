@@ -78,3 +78,12 @@ db. A backup that's never been test-restored isn't a verified backup.
 up protects against nothing — it has to live somewhere else entirely. Object
 storage (S3/R2) plus a scoped, least-privilege credential is the standard
 pattern for exactly this.
+
+### Aside: Elastic IP (not on the original roadmap, but done in between)
+
+Needed so the instance's address survives a stop/start, not just a reboot.
+Allocated and associated in the AWS console, then updated in three places —
+the DNS A record, `.env`'s `ALLOWED_ORIGINS`, and the `EC2_HOST` GitHub
+Actions secret. That last one is easy to miss since it isn't in any file in
+the repo at all — worth remembering next time an IP changes. See GUIDE.md's
+"Elastic IP" section for the full checklist.

@@ -12,8 +12,10 @@ https://claude-on-ec2.theskilledguru.com.
 **This working directory is the production server, not a separate dev
 machine.** There is no staging environment yet. Changes made here and pushed
 to `main` auto-deploy to the live site within seconds (see CI/CD below) —
-there is currently no automated test gate in front of that (tracked as an
-open item in `MAP.md`), so broken code pushed to `main` goes live immediately.
+`.github/workflows/deploy.yml` now gates that deploy behind a `backend-tests`
+job (pytest, against a real Postgres service container) and a
+`frontend-checks` job (`npm run build` + `npm run lint`); the `deploy` job
+only runs if both pass. See `MAP.md`'s item 2 log for how this is wired.
 
 Three other docs exist and should be checked rather than duplicated here:
 - `README.md` — features and tech stack (what the app does)
@@ -33,6 +35,11 @@ you're about to do and why *before* doing it, then explain what actually
 happened afterward. Don't just execute silently. Prefer verifying things
 for real (e.g. an actual restore drill, not just "the upload succeeded")
 over assuming success.
+
+**Whenever a feature is added (backend endpoint, model change, etc.), write
+tests for it in the same change** — don't let `backend/tests/` fall behind
+the app it's supposed to be gating. The CI test gate (see above) is only as
+good as the coverage behind it.
 
 ## Commands
 

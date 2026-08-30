@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     environment: str = "development"
     allowed_origins: str = "http://localhost:5173"
+    database_url: str = "postgres://postgres:postgres@localhost:5432/postgres"
 
     @property
     def allowed_origins_list(self) -> list[str]:

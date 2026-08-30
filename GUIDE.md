@@ -116,6 +116,27 @@ gunzip -c /tmp/restore.sql.gz | docker compose exec -T db psql -U "$POSTGRES_USE
 Verify the data looks right, then either promote it (rename databases) or
 drop `restore_test` if this was just a verification run.
 
+## Uptime monitoring
+
+External monitoring lives in **Better Stack** (chosen over UptimeRobot
+because UptimeRobot's free plan only alerts by email — Slack alerts require
+their paid Team plan; Better Stack's free plan includes Slack alerts
+natively, plus a faster 30s check interval vs UptimeRobot's 5min). There's
+nothing to configure in this repo — it's entirely dashboard-side config on
+betterstack.com, under the account that owns this project.
+
+Two monitors watch the live site, on purpose checking different failure
+modes:
+- `https://claude-on-ec2.theskilledguru.com/` — catches the whole instance,
+  `web` container, or Nginx being down.
+- `https://claude-on-ec2.theskilledguru.com/api/health` — catches `backend`
+  or `db` being down even while `web`/Nginx itself is still up and serving
+  the static frontend (a failure the homepage check alone wouldn't catch).
+
+Both alert to Slack (and email as a backup) on down/up transitions.
+Reconfigure alert channels, check interval, or add more monitors from the
+Better Stack dashboard directly — no deploy needed for changes there.
+
 ## Deploying to a fresh EC2 instance (Ubuntu 24.04)
 
 1. **Security group**: allow inbound 22 (SSH, ideally restricted to your IP),

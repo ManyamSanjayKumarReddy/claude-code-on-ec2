@@ -11,8 +11,7 @@ These close real risks that exist *right now* in the current setup.
 
 - [x] **1. Automated Postgres backups** — see log below.
 - [x] **2. Tests running in CI before deploy** — see log below.
-- [ ] **3. Basic uptime monitoring/alerting** — there is currently no way to
-      find out the site is down other than manually checking it.
+- [x] **3. Basic uptime monitoring/alerting** — see log below.
 
 ## Tier 2 — CI/CD maturity
 
@@ -114,6 +113,34 @@ throwaway Postgres container (`ci-test-db`, separate from the live `db`
 container — never pointed tests at real data) before writing any CI YAML,
 confirmed all 10 backend tests pass and migrations apply cleanly on a fresh
 database, and ran `npm run build`/`npm run lint` locally too.
+
+### 3. Basic uptime monitoring/alerting (done)
+
+**The gap:** no way to find out the site was down other than checking it by
+hand.
+
+**Service: Better Stack**, not UptimeRobot — UptimeRobot's free plan only
+supports email alerts; Slack alerts require their paid Team plan
+($29/month). Better Stack's free plan includes Slack alerts natively (and a
+faster 30s check interval vs UptimeRobot's 5min free tier), which is exactly
+what was needed. This lives entirely outside the repo — no code or config
+files here, it's dashboard-configured on betterstack.com. See GUIDE.md's
+"Uptime monitoring" section.
+
+**Two monitors, deliberately checking different failure modes:**
+- The homepage (`/`) — catches the instance/`web` container/Nginx being down.
+- `/api/health` — catches `backend`/`db` failing even while Nginx itself is
+  still up and serving the static frontend, which the homepage check alone
+  wouldn't catch.
+
+Both alert to Slack + email.
+
+**Verification status:** monitors are live and green as of this writing.
+Not yet drilled with a real simulated outage (deliberately stopping the
+`web` container to confirm the Slack alert actually fires) — that's a
+production-affecting action requiring explicit go-ahead first, unlike the
+backup restore drill which ran against a scratch database with no
+user-facing impact.
 
 ### Aside: Elastic IP (not on the original roadmap, but done in between)
 

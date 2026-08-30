@@ -64,6 +64,29 @@ docker compose exec backend aerich migrate --name describe_your_change
 docker compose exec backend aerich upgrade
 ```
 
+## Running backend tests
+
+Tests live in `backend/tests/` (pytest) and hit the real FastAPI app + a real
+Postgres database — no mocking. They run automatically in CI on every push
+and PR against `main` (see `.github/workflows/deploy.yml`), against a
+Postgres service container, and gate the deploy job.
+
+To run them locally, point a throwaway Postgres at them rather than the app's
+real dev database, so test data never lands in the product catalog you're
+looking at in the browser:
+
+```bash
+docker run --rm -d --name test-db -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test \
+  -e POSTGRES_DB=test -p 5433:5432 postgres:16-alpine
+
+cd backend
+pip install -r requirements.txt -r requirements-dev.txt
+DATABASE_URL=postgres://test:test@localhost:5433/test aerich upgrade
+DATABASE_URL=postgres://test:test@localhost:5433/test pytest
+
+docker stop test-db
+```
+
 ## Database backups
 
 `scripts/backup-db.sh` dumps the database, compresses it, and uploads it to

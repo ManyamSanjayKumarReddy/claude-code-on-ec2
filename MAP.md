@@ -10,9 +10,7 @@ journal, not just a checklist.
 These close real risks that exist *right now* in the current setup.
 
 - [x] **1. Automated Postgres backups** — see log below.
-- [ ] **2. Tests running in CI before deploy** — `git push` to `main`
-      currently auto-deploys with zero checks in between. Broken code would
-      deploy broken code, instantly, to the live site.
+- [x] **2. Tests running in CI before deploy** — see log below.
 - [ ] **3. Basic uptime monitoring/alerting** — there is currently no way to
       find out the site is down other than manually checking it.
 
@@ -78,6 +76,44 @@ db. A backup that's never been test-restored isn't a verified backup.
 up protects against nothing — it has to live somewhere else entirely. Object
 storage (S3/R2) plus a scoped, least-privilege credential is the standard
 pattern for exactly this.
+
+### 2. Tests running in CI before deploy (done)
+
+**The gap:** `deploy.yml` triggered on every push to `main` and SSH'd
+straight into the EC2 instance with no verification step at all — a typo, a
+broken migration, or a crashing endpoint would go live within seconds of
+being pushed.
+
+**Backend tests:** `backend/tests/` (pytest + FastAPI's `TestClient`) hits
+the real app and a real Postgres database — no mocking — covering the
+product CRUD endpoints and their 404/validation cases. Kept as real
+integration tests rather than mocked unit tests, same reasoning as the
+backup restore drill: a test that never talks to the actual database can
+pass while the actual database interaction is broken.
+`backend/requirements-dev.txt` keeps `pytest`/`httpx` out of the production
+image — only installed in CI (and optionally by hand for local runs, see
+GUIDE.md's "Running backend tests").
+
+**Frontend:** no test framework exists yet (tracked as a possible future
+step, not done here) — CI enforces the checks that already existed but
+weren't gated on anything: `npm run build` (includes the `tsc -b`
+typecheck) and `npm run lint`.
+
+**CI wiring:** `.github/workflows/deploy.yml` is now three jobs:
+`backend-tests` (spins up a `postgres:16-alpine` GitHub Actions service
+container — same image as prod — runs the real Aerich migrations against
+it, then pytest), `frontend-checks` (build + lint), and `deploy`, which
+declares `needs: [backend-tests, frontend-checks]` — if either check job
+fails, `deploy` never runs. The workflow now also triggers on
+`pull_request` against `main` (not just `push`), so a PR shows red/green
+before merge; `deploy` itself is additionally gated with
+`if: github.event_name == 'push'` so PRs never trigger a deploy.
+
+**Verified, not just assumed:** ran the full suite locally against a
+throwaway Postgres container (`ci-test-db`, separate from the live `db`
+container — never pointed tests at real data) before writing any CI YAML,
+confirmed all 10 backend tests pass and migrations apply cleanly on a fresh
+database, and ran `npm run build`/`npm run lint` locally too.
 
 ### Aside: Elastic IP (not on the original roadmap, but done in between)
 

@@ -1,11 +1,61 @@
-name: Deploy to EC2
+name: CI + Deploy to EC2
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - working-directory: backend
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - working-directory: backend
+        run: aerich upgrade
+      - working-directory: backend
+        run: pytest -q
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npm run build
+      - working-directory: frontend
+        run: npm run lint
+
   deploy:
+    needs: [backend-tests, frontend-checks]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH

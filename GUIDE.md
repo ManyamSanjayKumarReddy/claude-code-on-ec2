@@ -80,7 +80,7 @@ crontab -l   # check current entries
 
 An **object lifecycle rule** on the R2 bucket itself (Cloudflare dashboard →
 bucket → Settings → Object Lifecycle Rules) auto-deletes backups older than
-30 days — this isn't scriptable via the S3 API, it's a one-time dashboard
+7 days — this isn't scriptable via the S3 API, it's a one-time dashboard
 setting.
 
 **Restoring a backup** (e.g. to verify one, or after real data loss):

@@ -66,7 +66,7 @@ should stay free indefinitely.
   daily at 03:00 UTC, logging to `~/backups.log`.
 - A **lifecycle rule** on the R2 bucket itself (set once, in the Cloudflare
   dashboard — not scriptable via the S3 API) auto-deletes backups older
-  than 30 days, so storage cost never grows unbounded.
+  than 7 days, so storage cost never grows unbounded.
 
 **Verified, not just assumed:** ran the script manually, confirmed the
 object landed in R2, then did a full restore drill — downloaded that exact

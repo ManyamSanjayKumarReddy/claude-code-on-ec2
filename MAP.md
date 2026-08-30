@@ -135,12 +135,16 @@ files here, it's dashboard-configured on betterstack.com. See GUIDE.md's
 
 Both alert to Slack + email.
 
-**Verification status:** monitors are live and green as of this writing.
-Not yet drilled with a real simulated outage (deliberately stopping the
-`web` container to confirm the Slack alert actually fires) — that's a
-production-affecting action requiring explicit go-ahead first, unlike the
-backup restore drill which ran against a scratch database with no
-user-facing impact.
+**Verified, not just assumed:** deliberately stopped the `web` container
+(confirmed both the homepage and `/api/health` genuinely stopped responding
+— connection failures, not just slow responses) for about 75 seconds, then
+restarted it. The Slack alert landed. First attempt at this drill was a
+false start: it happened to overlap with an unrelated CI/CD deploy (from a
+docs-only push made moments earlier) that ran `docker compose up -d
+--build` mid-drill and silently brought `web` back up before the outage
+could be detected — worth remembering that a deploy in flight can mask a
+monitoring test like this. Re-ran it once no deploy was pending and got a
+clean result.
 
 ### Aside: Elastic IP (not on the original roadmap, but done in between)
 

@@ -9,9 +9,7 @@ journal, not just a checklist.
 
 These close real risks that exist *right now* in the current setup.
 
-- [ ] **1. Automated Postgres backups** — all product data currently lives
-      only in a Docker volume on this one EC2 instance. No backup exists. If
-      the disk or instance is lost, the data is gone permanently.
+- [x] **1. Automated Postgres backups** — see log below.
 - [ ] **2. Tests running in CI before deploy** — `git push` to `main`
       currently auto-deploys with zero checks in between. Broken code would
       deploy broken code, instantly, to the live site.
@@ -47,4 +45,36 @@ These close real risks that exist *right now* in the current setup.
 
 ## Log
 
-_(Nothing completed yet — entries get added here as each step finishes.)_
+### 1. Automated Postgres backups (done)
+
+**Storage: Cloudflare R2**, not AWS S3 — chosen for cost: R2 has no egress
+fees and a free tier (10GB storage, generous request limits) that doesn't
+expire after 12 months like S3's does. For this project's data volume, R2
+should stay free indefinitely.
+
+**How it works:**
+- `scripts/backup-db.sh` — dumps the `products` table (and everything else
+  in the database) with `pg_dump` inside the running `db` container,
+  compresses it, and uploads it to the R2 bucket via the AWS CLI (R2 is
+  S3-API-compatible, so the standard `aws s3 cp --endpoint-url ...` works
+  against it directly — no R2-specific tooling needed).
+- Credentials live in `.env` (`R2_ENDPOINT_URL`, `R2_BUCKET`,
+  `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) — gitignored, never committed.
+  The R2 API token is scoped to Object Read & Write on this one bucket only,
+  not full Cloudflare account access.
+- A cron job (`crontab -l` on the `claudeuser` account) runs the script
+  daily at 03:00 UTC, logging to `~/backups.log`.
+- A **lifecycle rule** on the R2 bucket itself (set once, in the Cloudflare
+  dashboard — not scriptable via the S3 API) auto-deletes backups older
+  than 30 days, so storage cost never grows unbounded.
+
+**Verified, not just assumed:** ran the script manually, confirmed the
+object landed in R2, then did a full restore drill — downloaded that exact
+backup, restored it into a scratch `restore_test` database, and confirmed
+its row count matched the live database exactly before dropping the scratch
+db. A backup that's never been test-restored isn't a verified backup.
+
+**Key lesson:** a backup stored on the same disk as the thing it's backing
+up protects against nothing — it has to live somewhere else entirely. Object
+storage (S3/R2) plus a scoped, least-privilege credential is the standard
+pattern for exactly this.

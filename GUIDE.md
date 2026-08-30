@@ -36,6 +36,7 @@
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins the backend accepts |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Postgres credentials, used by the `db` service |
 | `DATABASE_URL` | Tortoise ORM connection string, e.g. `postgres://user:pass@db:5432/dbname` |
+| `R2_ENDPOINT_URL` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Cloudflare R2 (S3-compatible) bucket used for database backups. The API token should be scoped to Object Read & Write on this one bucket only. |
 
 ## Local run
 
@@ -62,6 +63,35 @@ it:
 docker compose exec backend aerich migrate --name describe_your_change
 docker compose exec backend aerich upgrade
 ```
+
+## Database backups
+
+`scripts/backup-db.sh` dumps the database, compresses it, and uploads it to
+a Cloudflare R2 bucket (S3-compatible, configured via the `R2_*` variables
+above). It requires the AWS CLI installed locally (`aws --version`) — R2
+speaks the S3 API, so the standard AWS CLI works against it via
+`--endpoint-url` and `--region auto`, no R2-specific tooling needed.
+
+Scheduled via cron, daily:
+```bash
+crontab -l   # check current entries
+(crontab -l 2>/dev/null; echo "0 3 * * * /home/claudeuser/claude-code-on-ec2/scripts/backup-db.sh >> /home/claudeuser/backups.log 2>&1") | crontab -
+```
+
+An **object lifecycle rule** on the R2 bucket itself (Cloudflare dashboard →
+bucket → Settings → Object Lifecycle Rules) auto-deletes backups older than
+30 days — this isn't scriptable via the S3 API, it's a one-time dashboard
+setting.
+
+**Restoring a backup** (e.g. to verify one, or after real data loss):
+```bash
+aws s3 cp s3://<bucket>/<backup-file>.sql.gz /tmp/restore.sql.gz \
+  --endpoint-url "$R2_ENDPOINT_URL" --region auto
+docker compose exec -T db psql -U "$POSTGRES_USER" -c "CREATE DATABASE restore_test;"
+gunzip -c /tmp/restore.sql.gz | docker compose exec -T db psql -U "$POSTGRES_USER" -d restore_test
+```
+Verify the data looks right, then either promote it (rename databases) or
+drop `restore_test` if this was just a verification run.
 
 ## Deploying to a fresh EC2 instance (Ubuntu 24.04)
 

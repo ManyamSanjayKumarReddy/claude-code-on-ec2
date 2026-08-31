@@ -104,11 +104,7 @@ export function ProductForm({ initial, onSubmit, onCancel }: ProductFormProps) {
         <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-90 dark:from-violet-500 dark:to-blue-500"
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving...' : initial ? 'Save changes' : 'Add product'}
         </Button>
       </div>

@@ -76,17 +76,17 @@ export function ChatWidget() {
     <div className="fixed right-4 bottom-4 z-50 flex flex-col items-end gap-3">
       {open && (
         <div className="flex h-[75vh] max-h-[720px] w-[420px] max-w-[92vw] flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl">
-          <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-3 text-white dark:from-violet-500 dark:to-blue-500">
+          <div className="flex items-center justify-between gap-2 bg-primary px-4 py-3 text-primary-foreground">
             <div>
               <p className="font-heading text-sm font-semibold">Store Assistant</p>
-              <p className="text-xs text-white/80">Ask about our products</p>
+              <p className="text-xs text-primary-foreground/80">Ask about our products</p>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
               onClick={() => setOpen(false)}
-              className="text-white hover:bg-white/10 hover:text-white"
+              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
               aria-label="Close chat"
             >
               <X />
@@ -103,9 +103,7 @@ export function ChatWidget() {
               <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div
                   className={`max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
-                    m.role === 'user'
-                      ? 'bg-gradient-to-r from-violet-600 to-blue-600 text-white dark:from-violet-500 dark:to-blue-500'
-                      : 'bg-muted text-foreground'
+                    m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                   }`}
                 >
                   {m.content}
@@ -142,7 +140,7 @@ export function ChatWidget() {
               size="icon"
               onClick={handleSend}
               disabled={sending || !input.trim()}
-              className="shrink-0 bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-90 dark:from-violet-500 dark:to-blue-500"
+              className="shrink-0"
               aria-label="Send message"
             >
               <Send />
@@ -155,7 +153,7 @@ export function ChatWidget() {
         type="button"
         size="icon-lg"
         onClick={() => setOpen((o) => !o)}
-        className="size-14 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 shadow-lg hover:opacity-90 dark:from-violet-500 dark:to-blue-500"
+        className="size-14 rounded-full shadow-lg"
         aria-label={open ? 'Close chat' : 'Open chat'}
       >
         {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}

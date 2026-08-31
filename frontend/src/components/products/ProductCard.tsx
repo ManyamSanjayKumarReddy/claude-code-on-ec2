@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Pencil, PackageOpen, Trash2 } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Product } from '@/types/product'
@@ -18,7 +17,7 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
   const showImage = product.image_url && !imageFailed
 
   return (
-    <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
+    <Card className="flex flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md">
       {showImage ? (
         <img
           src={product.image_url!}
@@ -34,18 +33,20 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
         </div>
       )}
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{product.name}</CardTitle>
-          <Badge variant={outOfStock ? 'destructive' : 'secondary'} className="shrink-0">
-            {outOfStock ? 'Out of stock' : `${product.stock_quantity} in stock`}
-          </Badge>
-        </div>
+        <CardTitle className="line-clamp-2 text-sm">{product.name}</CardTitle>
       </CardHeader>
       <CardContent className="flex-1">
         {product.description && (
-          <p className="line-clamp-3 text-sm text-muted-foreground">{product.description}</p>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{product.description}</p>
         )}
-        <p className="mt-3 text-xl font-semibold">${product.price}</p>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-lg font-semibold text-primary">${product.price}</p>
+          <span
+            className={`text-xs font-medium ${outOfStock ? 'text-destructive' : 'text-muted-foreground'}`}
+          >
+            {outOfStock ? 'Out of stock' : `${product.stock_quantity} in stock`}
+          </span>
+        </div>
       </CardContent>
       <CardFooter className="justify-end gap-2">
         <Button variant="outline" size="sm" onClick={onEdit}>

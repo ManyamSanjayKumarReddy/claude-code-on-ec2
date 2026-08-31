@@ -8,6 +8,7 @@ class Product(Model):
     description = fields.TextField(null=True)
     price = fields.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = fields.IntField(default=0)
+    image_url = fields.CharField(max_length=1000, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 

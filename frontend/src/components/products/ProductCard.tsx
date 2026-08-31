@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, PackageOpen, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,22 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
   const outOfStock = product.stock_quantity === 0
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col overflow-hidden">
+      {product.image_url ? (
+        <img
+          src={product.image_url}
+          alt={product.name}
+          className="aspect-square w-full object-cover"
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      ) : (
+        <div className="flex aspect-square w-full items-center justify-center bg-muted">
+          <PackageOpen className="size-10 text-muted-foreground" />
+        </div>
+      )}
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{product.name}</CardTitle>

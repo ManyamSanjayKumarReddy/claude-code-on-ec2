@@ -1,14 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
+from app.schemas.product import ProductCreate, ProductPage, ProductRead, ProductUpdate
 
 router = APIRouter(prefix="/products", tags=["products"])
 
 
-@router.get("", response_model=list[ProductRead])
-async def list_products() -> list[Product]:
-    return await Product.all()
+@router.get("", response_model=ProductPage)
+async def list_products(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+) -> ProductPage:
+    total = await Product.all().count()
+    offset = (page - 1) * page_size
+    items = await Product.all().offset(offset).limit(page_size)
+    return ProductPage(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.post("", response_model=ProductRead, status_code=201)

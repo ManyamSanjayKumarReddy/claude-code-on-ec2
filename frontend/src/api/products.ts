@@ -1,4 +1,4 @@
-import type { Product, ProductInput } from '@/types/product'
+import type { Product, ProductInput, ProductPage } from '@/types/product'
 
 const BASE_URL = '/api/products'
 
@@ -11,8 +11,9 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function listProducts(): Promise<Product[]> {
-  return fetch(BASE_URL).then((res) => handle<Product[]>(res))
+export function listProducts(page = 1, pageSize = 20): Promise<ProductPage> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
+  return fetch(`${BASE_URL}?${params}`).then((res) => handle<ProductPage>(res))
 }
 
 export function createProduct(input: ProductInput): Promise<Product> {

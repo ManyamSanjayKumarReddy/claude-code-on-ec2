@@ -17,6 +17,7 @@ export function ProductForm({ initial, onSubmit, onCancel }: ProductFormProps) {
   const [description, setDescription] = useState(initial?.description ?? '')
   const [price, setPrice] = useState(initial?.price ?? '')
   const [stockQuantity, setStockQuantity] = useState(String(initial?.stock_quantity ?? 0))
+  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,6 +31,7 @@ export function ProductForm({ initial, onSubmit, onCancel }: ProductFormProps) {
         description: description.trim() === '' ? null : description,
         price,
         stock_quantity: Number(stockQuantity),
+        image_url: imageUrl.trim() === '' ? null : imageUrl.trim(),
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -86,6 +88,16 @@ export function ProductForm({ initial, onSubmit, onCancel }: ProductFormProps) {
             required
           />
         </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="image_url">Image URL</Label>
+        <Input
+          id="image_url"
+          type="url"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://example.com/product.jpg"
+        />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2 pt-2">

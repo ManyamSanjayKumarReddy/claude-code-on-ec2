@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PackageOpen, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PackageOpen, Plus } from 'lucide-react'
 
 import { createProduct, deleteProduct, listProducts, updateProduct } from '@/api/products'
 import {
@@ -23,8 +23,12 @@ import { ProductCard } from '@/components/products/ProductCard'
 import { ProductForm } from '@/components/products/ProductForm'
 import type { Product, ProductInput } from '@/types/product'
 
+const PAGE_SIZE = 20
+
 function App() {
   const [products, setProducts] = useState<Product[]>([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,15 +36,19 @@ function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
 
-  useEffect(() => {
-    refresh()
-  }, [])
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  async function refresh() {
+  useEffect(() => {
+    refresh(page)
+  }, [page])
+
+  async function refresh(targetPage = page) {
     setLoading(true)
     setError(null)
     try {
-      setProducts(await listProducts())
+      const result = await listProducts(targetPage, PAGE_SIZE)
+      setProducts(result.items)
+      setTotal(result.total)
     } catch {
       setError('Could not load products. Is the backend running?')
     } finally {
@@ -110,6 +118,32 @@ function App() {
               onDelete={() => setDeletingProduct(product)}
             />
           ))}
+        </div>
+      )}
+
+      {!loading && !error && total > 0 && (
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} &middot; {total} product{total === 1 ? '' : 's'}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next <ChevronRight />
+            </Button>
+          </div>
         </div>
       )}
 

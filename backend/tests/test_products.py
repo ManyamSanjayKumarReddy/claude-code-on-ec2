@@ -44,11 +44,43 @@ def test_get_product_not_found(client):
 def test_list_products_includes_created(client):
     created = client.post("/products", json=make_payload(name="List Widget")).json()
 
-    response = client.get("/products")
+    response = client.get("/products", params={"page_size": 100})
 
     assert response.status_code == 200
-    ids = [product["id"] for product in response.json()]
+    body = response.json()
+    ids = [product["id"] for product in body["items"]]
     assert created["id"] in ids
+    assert body["total"] >= 1
+
+
+def test_list_products_paginates(client):
+    for i in range(5):
+        client.post("/products", json=make_payload(name=f"Page Widget {i}"))
+
+    response = client.get("/products", params={"page": 1, "page_size": 2})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["items"]) == 2
+    assert body["page"] == 1
+    assert body["page_size"] == 2
+    assert body["total"] >= 5
+
+
+def test_create_product_with_image_url(client):
+    response = client.post(
+        "/products", json=make_payload(name="Image Widget", image_url="https://example.com/widget.jpg")
+    )
+
+    assert response.status_code == 201
+    assert response.json()["image_url"] == "https://example.com/widget.jpg"
+
+
+def test_create_product_without_image_url_defaults_to_none(client):
+    response = client.post("/products", json=make_payload(name="No Image Widget"))
+
+    assert response.status_code == 201
+    assert response.json()["image_url"] is None
 
 
 def test_update_product(client):

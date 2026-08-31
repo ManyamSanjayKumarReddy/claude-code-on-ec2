@@ -9,6 +9,7 @@ class ProductBase(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     price: Decimal = Field(gt=0, decimal_places=2)
     stock_quantity: int = Field(ge=0, default=0)
+    image_url: str | None = Field(default=None, max_length=1000)
 
 
 class ProductCreate(ProductBase):
@@ -25,3 +26,10 @@ class ProductRead(ProductBase):
     id: int
     created_at: datetime
     updated_at: datetime
+
+
+class ProductPage(BaseModel):
+    items: list[ProductRead]
+    total: int
+    page: int
+    page_size: int

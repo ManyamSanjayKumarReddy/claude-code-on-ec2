@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductForm } from '@/components/products/ProductForm'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import type { Product, ProductInput } from '@/types/product'
 
 const PAGE_SIZE = 20
@@ -84,16 +85,25 @@ function App() {
   }
 
   return (
-    <main className="mx-auto min-h-svh max-w-5xl px-6 py-10">
-      <header className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">My Store</h1>
-          <p className="text-sm text-muted-foreground">Manage your product catalog</p>
-        </div>
-        <Button onClick={openAddForm}>
-          <Plus /> Add product
-        </Button>
-      </header>
+    <div className="min-h-svh bg-gradient-to-b from-background via-background to-muted/40">
+      <main className="mx-auto max-w-5xl px-6 py-10">
+        <header className="mb-8 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="font-heading bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-2xl font-semibold text-transparent">
+              My Store
+            </h1>
+            <p className="text-sm text-muted-foreground">Manage your product catalog</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button
+              onClick={openAddForm}
+              className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+            >
+              <Plus /> Add product
+            </Button>
+          </div>
+        </header>
 
       {loading && <p className="text-sm text-muted-foreground">Loading products...</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -102,7 +112,7 @@ function App() {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
           <PackageOpen className="size-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">No products yet. Add your first one to get started.</p>
-          <Button onClick={openAddForm}>
+          <Button onClick={openAddForm} className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90">
             <Plus /> Add product
           </Button>
         </div>
@@ -176,7 +186,8 @@ function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </main>
+      </main>
+    </div>
   )
 }
 

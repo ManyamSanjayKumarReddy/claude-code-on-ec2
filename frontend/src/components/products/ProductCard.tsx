@@ -18,7 +18,7 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
   const showImage = product.image_url && !imageFailed
 
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
       {showImage ? (
         <img
           src={product.image_url!}

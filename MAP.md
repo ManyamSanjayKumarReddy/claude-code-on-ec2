@@ -34,6 +34,80 @@ These close real risks that exist *right now* in the current setup.
 - [ ] **8. Moving beyond a single instance** — a load balancer with multiple
       instances, or a managed platform (ECS/Kubernetes).
 
+## Tier 5 — E-commerce depth (build before Tier 6)
+
+The product catalog + chat assistant work surfaced a real problem: there's
+not enough *substance* under the AI layer to justify the harder GenAI
+patterns. Search-and-answer over a bare product table doesn't need an
+agent — a single retrieve-then-generate call handles it fine. Real
+orders/carts/returns give agents actual actions with consequences, not
+just lookups, which is what makes Tier 6's agent/multi-agent work a real
+exercise instead of a decorative one. No payment integration — that's a
+deliberate scope cut, not a gap; the goal is state and workflow depth for
+the AI layer to work against, not a real checkout.
+
+- [ ] **9. User accounts** — registration/login, so orders/carts/returns
+      have someone to belong to.
+- [ ] **10. Shopping cart** — add/remove/update items, persisted per user.
+- [ ] **11. Checkout & shipping flow (no payment)** — address, shipping
+      method, order creation from a cart.
+- [ ] **12. Order management** — a real lifecycle (placed → confirmed →
+      shipped → delivered), not just a row that exists or doesn't.
+- [ ] **13. Returns & refunds workflow** — stateful and multi-step (request
+      → validate eligibility → approve/reject → process) — the shape of
+      thing that actually needs an agent, unlike a plain product lookup.
+
+## Tier 6 — AI/GenAI production curriculum (staged, builds on Tier 5)
+
+Treating this as a deliberate learning progression, not a feature list —
+each stage should be done at production depth, not the simplified/toy
+version. Sequenced in order; later stages depend on earlier ones.
+
+- [ ] **14. Stage 1 — harden the existing chat assistant.** What exists
+      (`/api/chat`, retrieve-then-generate against the real LLM endpoint) is
+      the toy version. Production-grade needs: timeouts + retry/backoff on
+      the LLM call itself (currently a hang on their end just hangs us),
+      token usage tracking (no cost visibility today), prompt management
+      (system prompt is a hardcoded string, not versioned/tested like
+      code), and streaming responses (users wait ~6s staring at "Thinking...").
+- [ ] **15. Stage 2 — real RAG.** Current "RAG" is keyword-match-then-inject
+      — a toy. Real RAG needs: a proper chunking strategy (matters once
+      policy docs from Tier 5 exist), embeddings + `pgvector` (same
+      Postgres, no new infra), hybrid retrieval (keyword + vector via
+      reciprocal rank fusion — production RAG is rarely vector-only),
+      re-ranking as a second pass, answer attribution/citations, and actual
+      retrieval-quality evaluation instead of eyeballing replies.
+- [ ] **16. Stage 3 — agents (LangChain/LangGraph), for real.** Blocked on
+      a real constraint: the current LLM gateway (`gpt-oss-20b` via
+      `llm-dev.vivaquest.in`) crashes on tool-call output — a Harmony-format
+      parsing bug on their end, diagnosed via direct curl isolation (see
+      the observability aside below this section once written up). Doing
+      this stage properly needs either that gateway's tool-call parser
+      fixed, or a different endpoint confirmed to support function-calling
+      reliably. Once unblocked: multi-step reasoning, proper tool schemas
+      against Tier 5's real actions (place an order, check status, start a
+      return), conditional routing via LangGraph's graph (not a flat
+      ReAct loop), and conversation memory (today every message is
+      stateless — no follow-up context at all).
+- [ ] **17. Stage 4 — multi-agent + MCP.** A supervisor/router agent
+      dispatching to specialized sub-agents (ProductAgent, OrderAgent,
+      PolicyAgent) — only meaningfully different from one big prompt once
+      Tier 5 gives each agent genuinely distinct responsibilities and real
+      data to act on. Also: exposing the tools (`search_products`, order
+      lookup, policy search) as a real MCP server, not just in-process
+      LangChain tools. Depends on Stage 3's tool-calling blocker being
+      resolved first.
+- [ ] **18. Stage 5 — LLM-specific observability.** The Prometheus/Grafana
+      work (see the observability aside) covers *app* health, not
+      *LLM/agent* health. Needs: per-call tracing (prompt, model, latency,
+      tokens, cost), agent trace visualization (the actual sequence of
+      reasoning/tool-call steps per request — what Langfuse/LangSmith are
+      for), automated eval pipelines (golden datasets, LLM-as-judge,
+      retrieval metrics — not manual spot-checks), and production LLM-ops:
+      rate limiting on `/chat` (flagged as urgent — it's live on a public
+      domain, costs money per call, and has zero abuse protection right
+      now), cost budgets/alerts, fallback behavior if the LLM is down.
+
 ---
 
 ## Log

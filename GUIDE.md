@@ -21,7 +21,11 @@
     image (this is also what terminates TLS in production)
   - `Dockerfile` — multi-stage: builds the Vite app, then serves it via Nginx
 - `docker-compose.yml` — `db` (Postgres), `backend` (FastAPI), `web` (Nginx +
-  static build), `certbot` (renews the TLS cert every 12h)
+  static build), `certbot` (renews the TLS cert every 12h), `prometheus`
+  (scrapes `backend`'s `/metrics`), `grafana` (dashboards on top of Prometheus)
+- `monitoring/` — `prometheus.yml` (scrape config) and
+  `grafana/provisioning/datasources/` (auto-configures the Prometheus data
+  source in Grafana on startup, no manual click-through needed)
 - `certbot/` — Let's Encrypt account/cert data (`conf/`) and the ACME
   HTTP-01 challenge webroot (`www/`); both are git-ignored, generated at
   runtime
@@ -37,6 +41,8 @@
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Postgres credentials, used by the `db` service |
 | `DATABASE_URL` | Tortoise ORM connection string, e.g. `postgres://user:pass@db:5432/dbname` |
 | `R2_ENDPOINT_URL` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Cloudflare R2 (S3-compatible) bucket used for database backups. The API token should be scoped to Object Read & Write on this one bucket only. |
+| `IMAGE_TAG` | Optional; pins `backend`/`web` to a specific GHCR image tag (a git commit SHA) instead of `latest`, for rollback. Unset = `latest`. |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana's admin login password. See "Observability" below. |
 
 ## Local run
 
@@ -137,6 +143,64 @@ Both alert to Slack (and email as a backup) on down/up transitions.
 Reconfigure alert channels, check interval, or add more monitors from the
 Better Stack dashboard directly — no deploy needed for changes there.
 
+## Observability
+
+Better Stack (above) answers "is the site up" from the outside. For "why is
+it slow / what's actually happening," there's a second, internal layer:
+
+- **Structured logging**: the backend emits one JSON line per log event
+  (`structlog`, configured in `backend/app/core/logging.py`), instead of
+  free-text lines. A middleware in `app/main.py` generates a `request_id`
+  per request, binds it via `structlog.contextvars` so any log line during
+  that request carries it, logs one `request_finished` line per request
+  (method/path/status/duration_ms), and returns the id as an
+  `X-Request-ID` response header. View it with `docker compose logs
+  backend`. Uvicorn's own plain-text access log is disabled
+  (`--no-access-log` in `entrypoint.sh`) to avoid duplicate lines in two
+  different formats.
+- **`/metrics`**: exposed by the backend via
+  `prometheus-fastapi-instrumentator` — Prometheus text format, request
+  counts/latency histograms per endpoint. Not proxied through Nginx, so
+  it's unreachable from the public internet by construction (Nginx only
+  proxies `/api/*` to the backend).
+- **Prometheus**: scrapes `backend:8000/metrics` every 15s (config:
+  `monitoring/prometheus.yml`), stores history in its own volume
+  (`prometheus_data`).
+- **Grafana**: dashboards on top of Prometheus, own volume
+  (`grafana_data`). Its Prometheus data source is auto-provisioned
+  (`monitoring/grafana/provisioning/datasources/prometheus.yml`) — nothing
+  to click through manually after a fresh deploy.
+
+**Both Prometheus (`:9090`) and Grafana (`:3000`) are bound to
+`127.0.0.1` only** in `docker-compose.yml` — not exposed on the public
+internet, unlike `web`. Neither has the kind of hardening (rate-limited
+logins, etc.) that'd make sense to expose publicly on a real domain. View
+them via an SSH tunnel instead:
+
+```bash
+ssh -i /path/to/your-key.pem -L 3000:localhost:3000 ubuntu@<instance-ip> -N
+```
+
+Then open `http://localhost:3000` in your own browser. `-L <local>:<dest-host>:<dest-port>`
+forwards a port on *your* machine through the SSH connection to that
+destination *as seen by the server* — the `localhost` after the colon
+refers to the EC2 instance, not your laptop. Use whichever account/key you
+already SSH into the instance with (e.g. `ubuntu` + its `.pem` key) — the
+GitHub Actions deploy key can't be used for this even if you had it; it's
+restricted server-side to only run `deploy.sh`, with `no-port-forwarding`
+explicitly set.
+
+Log into Grafana with `admin` / the `GRAFANA_ADMIN_PASSWORD` value from
+`.env`. The Prometheus data source is already there. For dashboards,
+**build your own panels rather than trusting a random imported
+community dashboard ID** — several were tried and showed no data because
+they expect label names (like `app_name`) that this setup doesn't emit;
+our labels are `handler`/`method`/`status`/`job`/`instance`. Useful
+starter queries, as **Time series** panels unless noted:
+- Request rate by endpoint: `sum(rate(http_requests_total[5m])) by (handler)`
+- p95 latency by endpoint: `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))`
+- Total requests (as a **Stat** panel): `sum(http_requests_total)`
+
 ## Deploying to a fresh EC2 instance (Ubuntu 24.04)
 
 1. **Security group**: allow inbound 22 (SSH, ideally restricted to your IP),
@@ -215,3 +279,7 @@ If this Elastic IP is ever released and a new one associated instead
   for a while even after the authoritative nameservers are correct. Check
   with `dig +short A your.domain.com @8.8.8.8` (or `@1.1.1.1`) to see what
   the wider internet sees, independent of local caching.
+- **The `backend` image has no `curl`** (it's `python:3.12-slim`, kept
+  minimal on purpose). To poke an endpoint from inside the container, use
+  Python instead: `docker compose exec backend python3 -c "import
+  urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/metrics').read().decode())"`.

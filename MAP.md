@@ -224,3 +224,50 @@ live `backend`/`web` containers, for zero code change. Fixed with
 `.github/workflows/deploy.yml` — a push where every changed file is
 markdown now skips the pipeline entirely; a push that touches both docs
 and code still runs normally.
+
+### Aside: Observability — structured logging + Prometheus/Grafana (not on the original roadmap, but done in between)
+
+Grew out of a separate, parallel learning track (system-design/MLOps
+concepts) rather than a gap this file had flagged — but it's real,
+running infrastructure now, so it belongs here too. Better Stack (item 3)
+answers "is the site up"; this answers "why, and how much." See GUIDE.md's
+"Observability" section for the full how-to, including the SSH tunnel
+command.
+
+**Three layers, built in order:**
+1. **Structured JSON logging** (`structlog`) — one JSON line per log
+   event instead of free text, with a per-request `request_id` (generated
+   in `app/main.py`'s middleware, bound via `structlog.contextvars` so any
+   log line during that request carries it automatically) also returned as
+   an `X-Request-ID` response header. Uvicorn's own plain-text access log
+   is disabled to avoid duplicate lines in two formats.
+2. **`/metrics`** — `prometheus-fastapi-instrumentator` adds a standard
+   Prometheus-format endpoint (request counts, latency histograms by
+   handler). Not proxied through Nginx, so it's unreachable from the
+   public internet by construction, same as the backend itself already was.
+3. **Prometheus + Grafana** — Prometheus scrapes `/metrics` every 15s and
+   stores history in its own volume; Grafana queries Prometheus live and
+   is pre-provisioned with it as a data source (no manual click-through).
+   Both bound to `127.0.0.1` only in `docker-compose.yml`, viewed via an
+   SSH tunnel — same trust boundary as SSH itself, deliberately not on the
+   same public-internet footing as `web`.
+
+**Verified, not just assumed:** confirmed Prometheus's own target list
+showed `backend:8000` as `up`, queried it directly and got real counts
+back (not just "the pipeline looks green"), confirmed from outside the
+instance that hitting the public domain on `:3000`/`:9090` gets nothing,
+and — while setting up tunnel access — discovered `claudeuser` had no
+personal SSH key at all (only the GitHub Actions deploy key, which is
+`no-port-forwarding` and forced to only run `deploy.sh` anyway), so
+tunnel access actually goes through the `ubuntu` account's existing key
+instead.
+
+**Key lesson:** a green pipeline / a "success" API response isn't the same
+claim as "this is actually usable" — the GHCR pull step going green
+earlier didn't prove the running container was the pulled image (item 4's
+own lesson), and here, `/metrics` returning real Prometheus text didn't
+mean a random imported community dashboard (ID 14282) would show anything
+— it expected a label (`app_name`) this setup doesn't emit. Building 2-3
+panels by hand with known-good queries against data already confirmed to
+exist was more reliable than trusting someone else's dashboard's assumed
+label schema.

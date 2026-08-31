@@ -3,3 +3,4 @@ uvicorn[standard]==0.34.0
 pydantic-settings==2.7.1
 tortoise-orm[asyncpg]==0.21.6
 aerich==0.7.2
+structlog==24.4.0

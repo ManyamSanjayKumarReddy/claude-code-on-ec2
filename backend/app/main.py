@@ -1,12 +1,18 @@
+import time
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import structlog
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from tortoise.contrib.fastapi import RegisterTortoise
 
 from app.api.products import router as products_router
 from app.core.config import settings
+from app.core.logging import configure_logging, logger
 from app.core.tortoise_config import TORTOISE_ORM
+
+configure_logging()
 
 
 @asynccontextmanager
@@ -24,6 +30,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    request_id = str(uuid.uuid4())
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "request_finished",
+        request_id=request_id,
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+    )
+    return response
+
 
 app.include_router(products_router)
 

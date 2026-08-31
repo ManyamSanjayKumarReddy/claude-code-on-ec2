@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductForm } from '@/components/products/ProductForm'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import type { Product, ProductInput } from '@/types/product'
 
@@ -292,6 +293,7 @@ function App() {
         </AlertDialogContent>
       </AlertDialog>
       </main>
+      <ChatWidget />
     </div>
   )
 }

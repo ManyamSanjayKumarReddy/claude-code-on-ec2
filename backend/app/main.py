@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from tortoise.contrib.fastapi import RegisterTortoise
 
 from app.api.products import router as products_router
@@ -53,6 +54,8 @@ async def log_requests(request: Request, call_next):
     )
     return response
 
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 app.include_router(products_router)
 

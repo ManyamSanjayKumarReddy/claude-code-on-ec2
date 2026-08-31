@@ -15,11 +15,7 @@ These close real risks that exist *right now* in the current setup.
 
 ## Tier 2 — CI/CD maturity
 
-- [ ] **4. Build-once image registry + versioned deploys** — every deploy
-      currently rebuilds Docker images *on the production server itself*.
-      The more standard pattern: CI builds and tags an image, pushes it to a
-      registry, and the server just pulls and runs that exact artifact —
-      enabling instant rollback and keeping build tooling off production.
+- [x] **4. Build-once image registry + versioned deploys** — see log below.
 - [ ] **5. A staging environment** — a second, smaller deployment that gets
       updates first, so changes can be sanity-checked before hitting the
       real production site.
@@ -145,6 +141,69 @@ docs-only push made moments earlier) that ran `docker compose up -d
 could be detected — worth remembering that a deploy in flight can mask a
 monitoring test like this. Re-ran it once no deploy was pending and got a
 clean result.
+
+### 4. Build-once image registry + versioned deploys (done)
+
+**The gap:** `deploy.sh` did `git pull` then `docker compose up -d --build`
+— every deploy compiled the frontend (`npm run build`/Vite) and installed
+backend dependencies **on the production EC2 instance itself**. CI only
+ever checked the code (tests, lint, a separate `npm run build` inside
+GitHub's own environment); it never produced the actual artifact that went
+live. Two independent builds of "the same" code, in two different
+environments, is exactly the kind of drift that can make something pass CI
+and still break in prod.
+
+**Registry: GitHub Container Registry (GHCR)**, not Docker Hub or ECR —
+GitHub Actions already hands every workflow run a `GITHUB_TOKEN` scoped to
+push to `ghcr.io`, so no new secret or account had to be created just to
+push images. The two packages (`claude-code-on-ec2-backend`,
+`claude-code-on-ec2-web`) were set to public after confirming neither
+Dockerfile bakes in any `.env` secret at build time — secrets are only
+injected at container *runtime* via `env_file:`, never as build args — so
+production can `docker pull` them with no stored credential at all.
+
+**How it works now:**
+- A new `build-and-push` job in `.github/workflows/deploy.yml`, gated on
+  `needs: [backend-tests, frontend-checks]` (only tested code ever becomes
+  an image), builds the `backend` and `web` images and pushes each with two
+  tags: the git commit SHA (precise, for rollback) and `latest` (what
+  production tracks). `deploy` now also `needs: build-and-push`.
+- `docker-compose.yml` keeps `build: ./backend` / `build: ./frontend` (so
+  local dev can still `docker compose up -d --build`), but `image:` on both
+  services now points at
+  `ghcr.io/manyamsanjaykumarreddy/claude-code-on-ec2-{backend,web}:${IMAGE_TAG:-latest}`.
+  Compose only builds when explicitly told to (`--build`); otherwise it
+  pulls whatever `image:` resolves to — that split is what lets local dev
+  and production use the same file with opposite behavior.
+- `deploy.sh` no longer builds anything: `git pull` → `docker compose pull
+  backend web` → `docker compose up -d`.
+- Rollback capability (not yet exercised for a real incident): set
+  `IMAGE_TAG=<git-sha>` in `.env` on the server and redeploy to pin an
+  exact previous image instead of `latest`.
+
+**Bug hit along the way:** the first CI run failed with `invalid tag ...
+repository name must be lowercase`. Cause: `github.repository_owner`
+evaluates to the GitHub username's original case
+(`ManyamSanjayKumarReddy`), but container registry paths must be all
+lowercase, and GitHub Actions expressions have no built-in lowercase
+function. Fixed by hardcoding the lowercase owner
+(`manyamsanjaykumarreddy`) directly in the tag strings instead of
+interpolating it.
+
+**Verified, not just assumed:** after the full pipeline went green, checked
+the *actual running containers* on the server rather than trusting the
+green checkmark — `docker compose ps` showed `backend`/`web` tagged
+`ghcr.io/manyamsanjaykumarreddy/claude-code-on-ec2-{backend,web}:latest`
+(pulled images, not locally-built ones), both `healthy`, and the live site
+still returned `200` on both `/` and `/api/health` afterward. The old
+locally-built images (`claude-code-on-ec2-backend`/`-web`, un-namespaced)
+were left orphaned on disk and removed with `docker image prune`.
+
+**Key lesson:** "CI passed" and "the right thing is running in production"
+are two different claims — the pipeline going green only proves the deploy
+*step* succeeded, not that the server ended up running the image you think
+it did. Checking the actual container image tag on the box is what closes
+that gap.
 
 ### Aside: Elastic IP (not on the original roadmap, but done in between)
 

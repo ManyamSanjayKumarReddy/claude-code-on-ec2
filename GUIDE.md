@@ -43,6 +43,7 @@
 | `R2_ENDPOINT_URL` / `R2_BUCKET` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Cloudflare R2 (S3-compatible) bucket used for database backups. The API token should be scoped to Object Read & Write on this one bucket only. |
 | `IMAGE_TAG` | Optional; pins `backend`/`web` to a specific GHCR image tag (a git commit SHA) instead of `latest`, for rollback. Unset = `latest`. |
 | `GRAFANA_ADMIN_PASSWORD` | Grafana's admin login password. See "Observability" below. |
+| `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | OpenAI-compatible endpoint for the product chat assistant (`/api/chat`). Optional — the endpoint errors until all three are set. |
 
 ## Local run
 

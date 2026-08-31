@@ -213,3 +213,14 @@ the DNS A record, `.env`'s `ALLOWED_ORIGINS`, and the `EC2_HOST` GitHub
 Actions secret. That last one is easy to miss since it isn't in any file in
 the repo at all — worth remembering next time an IP changes. See GUIDE.md's
 "Elastic IP" section for the full checklist.
+
+### Aside: Skip CI/CD on docs-only changes (not on the original roadmap, but done in between)
+
+Noticed while closing item 4: the workflow trigger had no path filtering,
+so a commit that only touched `README.md`/`MAP.md` still ran the full
+pipeline — tests, an image rebuild/push to GHCR, and a real restart of the
+live `backend`/`web` containers, for zero code change. Fixed with
+`paths-ignore: ['**.md']` on both the `push` and `pull_request` triggers in
+`.github/workflows/deploy.yml` — a push where every changed file is
+markdown now skips the pipeline entirely; a push that touches both docs
+and code still runs normally.

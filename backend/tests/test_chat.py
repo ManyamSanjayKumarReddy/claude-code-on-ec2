@@ -12,11 +12,11 @@ def test_search_products_finds_matching_product(client):
             price="5.99",
             stock_quantity=10,
         )
-        return await search_products.ainvoke({"query": "Chocolate"})
+        return await search_products("Do you have any chocolate spread?")
 
     results = client.portal.call(scenario)
 
-    assert any(r["name"] == "Chocolate Spread" for r in results)
+    assert any(r.name == "Chocolate Spread" for r in results)
 
 
 def test_search_products_falls_back_to_description(client):
@@ -27,15 +27,15 @@ def test_search_products_falls_back_to_description(client):
             price="9.99",
             stock_quantity=3,
         )
-        return await search_products.ainvoke({"query": "camping"})
+        return await search_products("anything good for camping?")
 
     results = client.portal.call(scenario)
 
-    assert any(r["name"] == "Widget" for r in results)
+    assert any(r.name == "Widget" for r in results)
 
 
 def test_search_products_no_match_returns_empty(client):
-    results = client.portal.call(search_products.ainvoke, {"query": "zzz_no_such_product_zzz"})
+    results = client.portal.call(search_products, "xqzzptlkgnonexistent")
 
     assert results == []
 

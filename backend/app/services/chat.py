@@ -50,7 +50,7 @@ def _format_context(products: list[Product]) -> str:
     return "Matching products from the catalog:\n" + "\n".join(lines)
 
 
-async def run_chat(message: str) -> str:
+async def run_chat(message: str) -> tuple[str, list[Product]]:
     products = await search_products(message)
     context = _format_context(products)
     model = get_chat_model()
@@ -60,4 +60,4 @@ async def run_chat(message: str) -> str:
             HumanMessage(content=message),
         ]
     )
-    return response.content
+    return response.content, products

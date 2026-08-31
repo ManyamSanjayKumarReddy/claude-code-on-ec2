@@ -1,5 +1,14 @@
+export interface ChatProductRef {
+  id: number
+  name: string
+  price: string
+  image_url: string | null
+  stock_quantity: number
+}
+
 export interface ChatReply {
   reply: string
+  products: ChatProductRef[]
 }
 
 export async function sendChatMessage(message: string): Promise<ChatReply> {

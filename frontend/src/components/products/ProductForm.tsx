@@ -107,7 +107,7 @@ export function ProductForm({ initial, onSubmit, onCancel }: ProductFormProps) {
         <Button
           type="submit"
           disabled={submitting}
-          className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+          className="bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-90 dark:from-violet-500 dark:to-blue-500"
         >
           {submitting ? 'Saving...' : initial ? 'Save changes' : 'Add product'}
         </Button>

@@ -121,11 +121,11 @@ function App() {
   }
 
   return (
-    <div className="min-h-svh bg-gradient-to-b from-background via-background to-muted/40">
+    <div className="min-h-svh bg-gradient-to-b from-background via-background to-violet-50/40 dark:to-violet-950/20">
       <main className="mx-auto max-w-[1600px] px-6 py-10 2xl:px-10">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="font-heading bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-2xl font-semibold text-transparent">
+            <h1 className="font-heading bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-2xl font-semibold text-transparent dark:from-violet-400 dark:to-blue-400">
               My Store
             </h1>
             <p className="text-sm text-muted-foreground">Manage your product catalog</p>
@@ -134,7 +134,7 @@ function App() {
             <ThemeToggle />
             <Button
               onClick={openAddForm}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+              className="bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-90 dark:from-violet-500 dark:to-blue-500"
             >
               <Plus /> Add product
             </Button>
@@ -191,6 +191,11 @@ function App() {
             type="button"
             variant={inStockOnly ? 'default' : 'outline'}
             onClick={() => setInStockOnly((v) => !v)}
+            className={
+              inStockOnly
+                ? 'bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-90 dark:from-violet-500 dark:to-blue-500'
+                : ''
+            }
           >
             In stock only
           </Button>
@@ -208,7 +213,7 @@ function App() {
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
           <PackageOpen className="size-10 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">No products yet. Add your first one to get started.</p>
-          <Button onClick={openAddForm} className="bg-gradient-to-r from-primary to-primary/80 hover:opacity-90">
+          <Button onClick={openAddForm} className="bg-gradient-to-r from-violet-600 to-blue-600 hover:opacity-90 dark:from-violet-500 dark:to-blue-500">
             <Plus /> Add product
           </Button>
         </div>

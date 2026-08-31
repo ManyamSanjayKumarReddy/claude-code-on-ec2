@@ -67,6 +67,48 @@ def test_list_products_paginates(client):
     assert body["total"] >= 5
 
 
+def test_list_products_filters_by_search(client):
+    created = client.post(
+        "/products", json=make_payload(name="Zzyzx Search Target", description="unique marker")
+    ).json()
+
+    response = client.get("/products", params={"search": "Zzyzx", "page_size": 100})
+
+    assert response.status_code == 200
+    body = response.json()
+    ids = [p["id"] for p in body["items"]]
+    assert created["id"] in ids
+    assert all(
+        "zzyzx" in p["name"].lower() or "zzyzx" in (p["description"] or "").lower() for p in body["items"]
+    )
+
+
+def test_list_products_filters_by_price_range(client):
+    created = client.post("/products", json=make_payload(name="Price Filter Widget", price="123.45")).json()
+
+    response = client.get(
+        "/products", params={"min_price": "123.00", "max_price": "124.00", "page_size": 100}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    ids = [p["id"] for p in body["items"]]
+    assert created["id"] in ids
+    assert all(123.00 <= float(p["price"]) <= 124.00 for p in body["items"])
+
+
+def test_list_products_filters_by_in_stock(client):
+    out_of_stock = client.post("/products", json=make_payload(name="Zero Stock Widget", stock_quantity=0)).json()
+
+    response = client.get("/products", params={"in_stock": "false", "page_size": 100})
+
+    assert response.status_code == 200
+    body = response.json()
+    ids = [p["id"] for p in body["items"]]
+    assert out_of_stock["id"] in ids
+    assert all(p["stock_quantity"] == 0 for p in body["items"])
+
+
 def test_create_product_with_image_url(client):
     response = client.post(
         "/products", json=make_payload(name="Image Widget", image_url="https://example.com/widget.jpg")

@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, HTTPException, Query
+from tortoise.expressions import Q
 
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductPage, ProductRead, ProductUpdate
@@ -10,10 +13,26 @@ router = APIRouter(prefix="/products", tags=["products"])
 async def list_products(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=200),
+    min_price: Decimal | None = Query(default=None, ge=0),
+    max_price: Decimal | None = Query(default=None, ge=0),
+    in_stock: bool | None = Query(default=None),
 ) -> ProductPage:
-    total = await Product.all().count()
+    qs = Product.all()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
+    if min_price is not None:
+        qs = qs.filter(price__gte=min_price)
+    if max_price is not None:
+        qs = qs.filter(price__lte=max_price)
+    if in_stock is True:
+        qs = qs.filter(stock_quantity__gt=0)
+    elif in_stock is False:
+        qs = qs.filter(stock_quantity=0)
+
+    total = await qs.count()
     offset = (page - 1) * page_size
-    items = await Product.all().offset(offset).limit(page_size)
+    items = await qs.offset(offset).limit(page_size)
     return ProductPage(items=items, total=total, page=page, page_size=page_size)
 
 

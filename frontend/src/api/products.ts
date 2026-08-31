@@ -11,8 +11,19 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function listProducts(page = 1, pageSize = 20): Promise<ProductPage> {
+export interface ProductFilters {
+  search?: string
+  minPrice?: string
+  maxPrice?: string
+  inStock?: boolean
+}
+
+export function listProducts(page = 1, pageSize = 20, filters: ProductFilters = {}): Promise<ProductPage> {
   const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
+  if (filters.search) params.set('search', filters.search)
+  if (filters.minPrice) params.set('min_price', filters.minPrice)
+  if (filters.maxPrice) params.set('max_price', filters.maxPrice)
+  if (filters.inStock !== undefined) params.set('in_stock', String(filters.inStock))
   return fetch(`${BASE_URL}?${params}`).then((res) => handle<ProductPage>(res))
 }
 

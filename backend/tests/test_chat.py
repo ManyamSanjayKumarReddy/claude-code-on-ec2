@@ -52,3 +52,10 @@ def test_chat_endpoint_rejects_empty_message(client):
     response = client.post("/chat", json={"message": ""})
 
     assert response.status_code == 422
+
+
+def test_chat_endpoint_returns_503_when_llm_not_configured(client):
+    response = client.post("/chat", json={"message": "hi"})
+
+    assert response.status_code == 503
+    assert "not configured" in response.json()["detail"]

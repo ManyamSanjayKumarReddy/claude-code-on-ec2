@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pencil, PackageOpen, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -13,22 +14,23 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
   const outOfStock = product.stock_quantity === 0
+  const [imageFailed, setImageFailed] = useState(false)
+  const showImage = product.image_url && !imageFailed
 
   return (
     <Card className="flex flex-col overflow-hidden">
-      {product.image_url ? (
+      {showImage ? (
         <img
-          src={product.image_url}
+          src={product.image_url!}
           alt={product.name}
           className="aspect-square w-full object-cover"
           loading="lazy"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
+          onError={() => setImageFailed(true)}
         />
       ) : (
-        <div className="flex aspect-square w-full items-center justify-center bg-muted">
-          <PackageOpen className="size-10 text-muted-foreground" />
+        <div className="flex aspect-square w-full flex-col items-center justify-center gap-1 border-b bg-muted">
+          <PackageOpen className="size-8 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">No image</span>
         </div>
       )}
       <CardHeader>

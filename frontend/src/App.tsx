@@ -7,6 +7,7 @@ import {
   Plus,
   Search,
   ShoppingBasket,
+  ShoppingCart,
   Sparkles,
   User as UserIcon,
   X,
@@ -14,7 +15,10 @@ import {
 
 import { createProduct, deleteProduct, listProducts, updateProduct } from '@/api/products'
 import { getCurrentUser, logout } from '@/api/auth'
+import { addToCart, getCart, removeFromCart, updateCartItem } from '@/api/cart'
 import { AuthForm } from '@/components/auth/AuthForm'
+import { CartPanel } from '@/components/cart/CartPanel'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +44,7 @@ import { ChatPage } from '@/components/chat/ChatPage'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import type { Product, ProductInput } from '@/types/product'
 import type { User } from '@/types/user'
+import type { Cart } from '@/types/cart'
 
 const PAGE_SIZE = 24
 
@@ -59,6 +64,10 @@ function App() {
 
   const [user, setUser] = useState<User | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
+
+  const [cart, setCart] = useState<Cart | null>(null)
+  const [cartOpen, setCartOpen] = useState(false)
+  const [cartError, setCartError] = useState<string | null>(null)
 
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -90,6 +99,14 @@ function App() {
     getCurrentUser().then(setUser)
   }, [])
 
+  useEffect(() => {
+    if (user) {
+      getCart().then(setCart).catch(() => setCart(null))
+    } else {
+      setCart(null)
+    }
+  }, [user])
+
   async function handleAuthSuccess(loggedInUser: User) {
     setUser(loggedInUser)
     setAuthOpen(false)
@@ -98,6 +115,48 @@ function App() {
   async function handleLogout() {
     await logout()
     setUser(null)
+  }
+
+  async function handleAddToCart(productId: number) {
+    if (!user) {
+      setAuthOpen(true)
+      return
+    }
+    setCartError(null)
+    try {
+      setCart(await addToCart(productId, 1))
+    } catch (err) {
+      setCartError(err instanceof Error ? err.message : 'Could not add to cart')
+    } finally {
+      setCartOpen(true)
+    }
+  }
+
+  function openCart() {
+    if (!user) {
+      setAuthOpen(true)
+      return
+    }
+    setCartError(null)
+    setCartOpen(true)
+  }
+
+  async function handleUpdateCartQuantity(productId: number, quantity: number) {
+    setCartError(null)
+    try {
+      setCart(await updateCartItem(productId, quantity))
+    } catch (err) {
+      setCartError(err instanceof Error ? err.message : 'Could not update cart')
+    }
+  }
+
+  async function handleRemoveCartItem(productId: number) {
+    setCartError(null)
+    try {
+      setCart(await removeFromCart(productId))
+    } catch (err) {
+      setCartError(err instanceof Error ? err.message : 'Could not update cart')
+    }
   }
 
   async function refresh(targetPage = page) {
@@ -189,6 +248,14 @@ function App() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <Button variant="outline" size="icon" className="relative" onClick={openCart} aria-label="Open cart">
+              <ShoppingCart />
+              {cart && cart.item_count > 0 && (
+                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center px-1 text-[10px]">
+                  {cart.item_count}
+                </Badge>
+              )}
+            </Button>
             {view === 'catalog' && (
               <Button onClick={openAddForm}>
                 <Plus /> Add product
@@ -314,6 +381,7 @@ function App() {
                 product={product}
                 onEdit={() => openEditForm(product)}
                 onDelete={() => setDeletingProduct(product)}
+                onAddToCart={() => handleAddToCart(product.id)}
               />
             ))}
           </div>
@@ -383,6 +451,16 @@ function App() {
               <DialogTitle>Sign in</DialogTitle>
             </DialogHeader>
             <AuthForm onSuccess={handleAuthSuccess} />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Your cart</DialogTitle>
+            </DialogHeader>
+            {cartError && <p className="text-sm text-destructive">{cartError}</p>}
+            <CartPanel cart={cart} onUpdateQuantity={handleUpdateCartQuantity} onRemove={handleRemoveCartItem} />
           </DialogContent>
         </Dialog>
       </main>

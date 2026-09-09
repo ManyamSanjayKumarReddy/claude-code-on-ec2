@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, PackageOpen, Trash2 } from 'lucide-react'
+import { Pencil, PackageOpen, ShoppingCart, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,9 +9,10 @@ interface ProductCardProps {
   product: Product
   onEdit: () => void
   onDelete: () => void
+  onAddToCart: () => void
 }
 
-export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
+export function ProductCard({ product, onEdit, onDelete, onAddToCart }: ProductCardProps) {
   const outOfStock = product.stock_quantity === 0
   const [imageFailed, setImageFailed] = useState(false)
   const showImage = product.image_url && !imageFailed
@@ -48,13 +49,18 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
           </span>
         </div>
       </CardContent>
-      <CardFooter className="justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Pencil /> Edit
+      <CardFooter className="justify-between gap-2">
+        <Button size="sm" onClick={onAddToCart} disabled={outOfStock}>
+          <ShoppingCart /> Add to cart
         </Button>
-        <Button variant="destructive" size="sm" onClick={onDelete}>
-          <Trash2 /> Delete
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon-sm" onClick={onEdit} aria-label="Edit product">
+            <Pencil />
+          </Button>
+          <Button variant="destructive" size="icon-sm" onClick={onDelete} aria-label="Delete product">
+            <Trash2 />
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   )

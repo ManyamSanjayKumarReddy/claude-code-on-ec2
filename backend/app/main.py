@@ -9,6 +9,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from tortoise.contrib.fastapi import RegisterTortoise
 
 from app.api.auth import router as auth_router
+from app.api.cart import router as cart_router
 from app.api.chat import router as chat_router
 from app.api.products import router as products_router
 from app.core.config import settings
@@ -60,6 +61,7 @@ async def log_requests(request: Request, call_next):
 Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 app.include_router(auth_router)
+app.include_router(cart_router)
 app.include_router(products_router)
 app.include_router(chat_router)
 

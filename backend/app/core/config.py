@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     llm_base_url: str | None = None
     llm_api_key: str | None = None
     llm_model: str | None = None
+    secret_key: str = "dev-secret-key-change-in-production"
+    access_token_expire_minutes: int = 60 * 24 * 7
 
     @property
     def allowed_origins_list(self) -> list[str]:

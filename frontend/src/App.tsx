@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, PackageOpen, Plus, Search, ShoppingBasket, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, PackageOpen, Plus, Search, ShoppingBasket, User as UserIcon, X } from 'lucide-react'
 
 import { createProduct, deleteProduct, listProducts, updateProduct } from '@/api/products'
+import { getCurrentUser, logout } from '@/api/auth'
+import { AuthForm } from '@/components/auth/AuthForm'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +28,7 @@ import { ProductForm } from '@/components/products/ProductForm'
 import { ChatWidget } from '@/components/chat/ChatWidget'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import type { Product, ProductInput } from '@/types/product'
+import type { User } from '@/types/user'
 
 const PAGE_SIZE = 24
 
@@ -39,6 +42,9 @@ function App() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+
+  const [user, setUser] = useState<User | null>(null)
+  const [authOpen, setAuthOpen] = useState(false)
 
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -65,6 +71,20 @@ function App() {
     refresh(page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, minPrice, maxPrice, inStockOnly])
+
+  useEffect(() => {
+    getCurrentUser().then(setUser)
+  }, [])
+
+  async function handleAuthSuccess(loggedInUser: User) {
+    setUser(loggedInUser)
+    setAuthOpen(false)
+  }
+
+  async function handleLogout() {
+    await logout()
+    setUser(null)
+  }
 
   async function refresh(targetPage = page) {
     setLoading(true)
@@ -138,6 +158,20 @@ function App() {
             <Button onClick={openAddForm}>
               <Plus /> Add product
             </Button>
+            {user ? (
+              <div className="flex items-center gap-2 pl-1">
+                <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
+                  <UserIcon className="size-4" /> {user.full_name}
+                </span>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut /> Sign out
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" onClick={() => setAuthOpen(true)}>
+                <UserIcon /> Sign in
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -275,6 +309,15 @@ function App() {
               onSubmit={handleSubmit}
               onCancel={() => setFormOpen(false)}
             />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={authOpen} onOpenChange={setAuthOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Sign in</DialogTitle>
+            </DialogHeader>
+            <AuthForm onSuccess={handleAuthSuccess} />
           </DialogContent>
         </Dialog>
 

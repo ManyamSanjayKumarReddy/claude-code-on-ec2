@@ -46,7 +46,7 @@ exercise instead of a decorative one. No payment integration — that's a
 deliberate scope cut, not a gap; the goal is state and workflow depth for
 the AI layer to work against, not a real checkout.
 
-- [ ] **9. User accounts** — registration/login, so orders/carts/returns
+- [x] **9. User accounts** — registration/login, so orders/carts/returns
       have someone to belong to.
 - [ ] **10. Shopping cart** — add/remove/update items, persisted per user.
 - [ ] **11. Checkout & shipping flow (no payment)** — address, shipping

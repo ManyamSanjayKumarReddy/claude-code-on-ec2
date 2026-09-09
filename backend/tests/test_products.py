@@ -125,6 +125,25 @@ def test_create_product_without_image_url_defaults_to_none(client):
     assert response.json()["image_url"] is None
 
 
+def test_create_product_with_round_price_serializes_correctly(client):
+    response = client.post("/products", json=make_payload(name="Round Price Widget", price="20.00"))
+
+    assert response.status_code == 201
+    assert response.json()["price"] == "20.00"
+
+
+def test_update_product_with_round_price_serializes_correctly(client):
+    created = client.post("/products", json=make_payload(name="Round Update Widget")).json()
+
+    response = client.put(
+        f"/products/{created['id']}",
+        json=make_payload(name="Round Update Widget", price="50.00"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["price"] == "50.00"
+
+
 def test_update_product(client):
     created = client.post("/products", json=make_payload(name="Old Name")).json()
 

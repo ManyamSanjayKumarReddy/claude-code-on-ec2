@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   LogOut,
   PackageOpen,
   Plus,
@@ -18,6 +19,8 @@ import { getCurrentUser, logout } from '@/api/auth'
 import { addToCart, getCart, removeFromCart, updateCartItem } from '@/api/cart'
 import { AuthForm } from '@/components/auth/AuthForm'
 import { CartPanel } from '@/components/cart/CartPanel'
+import { CheckoutForm } from '@/components/cart/CheckoutForm'
+import { OrdersPage } from '@/components/orders/OrdersPage'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
@@ -45,10 +48,11 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import type { Product, ProductInput } from '@/types/product'
 import type { User } from '@/types/user'
 import type { Cart } from '@/types/cart'
+import type { Order } from '@/types/order'
 
 const PAGE_SIZE = 24
 
-type View = 'catalog' | 'assistant'
+type View = 'catalog' | 'assistant' | 'orders'
 
 function App() {
   const [view, setView] = useState<View>('catalog')
@@ -68,6 +72,8 @@ function App() {
   const [cart, setCart] = useState<Cart | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [cartError, setCartError] = useState<string | null>(null)
+  const [cartStep, setCartStep] = useState<'cart' | 'checkout'>('cart')
+  const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null)
 
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -104,6 +110,7 @@ function App() {
       getCart().then(setCart).catch(() => setCart(null))
     } else {
       setCart(null)
+      setView((v) => (v === 'orders' ? 'catalog' : v))
     }
   }, [user])
 
@@ -138,7 +145,28 @@ function App() {
       return
     }
     setCartError(null)
+    setCartStep('cart')
+    setConfirmedOrder(null)
     setCartOpen(true)
+  }
+
+  function handleCartOpenChange(open: boolean) {
+    setCartOpen(open)
+    if (!open) {
+      setCartStep('cart')
+      setConfirmedOrder(null)
+    }
+  }
+
+  function handleOrderPlaced(order: Order) {
+    setConfirmedOrder(order)
+    setCart({ items: [], total: '0', item_count: 0 })
+    setCartStep('cart')
+  }
+
+  function goToOrders() {
+    setCartOpen(false)
+    setView('orders')
   }
 
   async function handleUpdateCartQuantity(productId: number, quantity: number) {
@@ -244,6 +272,14 @@ function App() {
             >
               <Sparkles /> Assistant
             </Button>
+            <Button
+              type="button"
+              variant={view === 'orders' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => (user ? setView('orders') : setAuthOpen(true))}
+            >
+              <ClipboardList /> Orders
+            </Button>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -287,6 +323,7 @@ function App() {
         }
       >
         {view === 'assistant' && <ChatPage />}
+        {view === 'orders' && <OrdersPage />}
 
         {view === 'catalog' && (
         <>
@@ -454,13 +491,38 @@ function App() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+        <Dialog open={cartOpen} onOpenChange={handleCartOpenChange}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Your cart</DialogTitle>
+              <DialogTitle>
+                {confirmedOrder ? 'Order placed!' : cartStep === 'checkout' ? 'Checkout' : 'Your cart'}
+              </DialogTitle>
             </DialogHeader>
-            {cartError && <p className="text-sm text-destructive">{cartError}</p>}
-            <CartPanel cart={cart} onUpdateQuantity={handleUpdateCartQuantity} onRemove={handleRemoveCartItem} />
+
+            {confirmedOrder ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Order #{confirmedOrder.id} confirmed — total ${confirmedOrder.total}. It'll ship to{' '}
+                  {confirmedOrder.city}, {confirmedOrder.state}.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setCartOpen(false)}>
+                    Continue shopping
+                  </Button>
+                  <Button onClick={goToOrders}>View my orders</Button>
+                </div>
+              </div>
+            ) : cartStep === 'checkout' && cart ? (
+              <CheckoutForm cart={cart} onSuccess={handleOrderPlaced} onCancel={() => setCartStep('cart')} />
+            ) : (
+              <div className="flex flex-col gap-4">
+                {cartError && <p className="text-sm text-destructive">{cartError}</p>}
+                <CartPanel cart={cart} onUpdateQuantity={handleUpdateCartQuantity} onRemove={handleRemoveCartItem} />
+                {cart && cart.items.length > 0 && (
+                  <Button onClick={() => setCartStep('checkout')}>Checkout</Button>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </main>

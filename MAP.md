@@ -49,7 +49,7 @@ the AI layer to work against, not a real checkout.
 - [x] **9. User accounts** — registration/login, so orders/carts/returns
       have someone to belong to.
 - [x] **10. Shopping cart** — add/remove/update items, persisted per user.
-- [ ] **11. Checkout & shipping flow (no payment)** — address, shipping
+- [x] **11. Checkout & shipping flow (no payment)** — address, shipping
       method, order creation from a cart.
 - [ ] **12. Order management** — a real lifecycle (placed → confirmed →
       shipped → delivered), not just a row that exists or doesn't.

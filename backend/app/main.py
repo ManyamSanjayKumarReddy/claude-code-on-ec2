@@ -10,6 +10,7 @@ from tortoise.contrib.fastapi import RegisterTortoise
 
 from app.api.auth import router as auth_router
 from app.api.cart import router as cart_router
+from app.api.checkout import checkout_router, orders_router
 from app.api.chat import router as chat_router
 from app.api.products import router as products_router
 from app.core.config import settings
@@ -62,6 +63,8 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_sch
 
 app.include_router(auth_router)
 app.include_router(cart_router)
+app.include_router(checkout_router)
+app.include_router(orders_router)
 app.include_router(products_router)
 app.include_router(chat_router)
 

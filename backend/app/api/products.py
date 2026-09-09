@@ -38,7 +38,9 @@ async def list_products(
 
 @router.post("", response_model=ProductRead, status_code=201)
 async def create_product(payload: ProductCreate) -> Product:
-    return await Product.create(**payload.model_dump())
+    product = await Product.create(**payload.model_dump())
+    await product.refresh_from_db()
+    return product
 
 
 @router.get("/{product_id}", response_model=ProductRead)
@@ -56,6 +58,7 @@ async def update_product(product_id: int, payload: ProductUpdate) -> Product:
         raise HTTPException(status_code=404, detail="Product not found")
     product.update_from_dict(payload.model_dump())
     await product.save()
+    await product.refresh_from_db()
     return product
 
 

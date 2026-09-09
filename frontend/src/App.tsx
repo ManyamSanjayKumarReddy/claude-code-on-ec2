@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, LogOut, PackageOpen, Plus, Search, ShoppingBasket, User as UserIcon, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  PackageOpen,
+  Plus,
+  Search,
+  ShoppingBasket,
+  Sparkles,
+  User as UserIcon,
+  X,
+} from 'lucide-react'
 
 import { createProduct, deleteProduct, listProducts, updateProduct } from '@/api/products'
 import { getCurrentUser, logout } from '@/api/auth'
@@ -25,14 +36,17 @@ import {
 } from '@/components/ui/dialog'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductForm } from '@/components/products/ProductForm'
-import { ChatWidget } from '@/components/chat/ChatWidget'
+import { ChatPage } from '@/components/chat/ChatPage'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import type { Product, ProductInput } from '@/types/product'
 import type { User } from '@/types/user'
 
 const PAGE_SIZE = 24
 
+type View = 'catalog' | 'assistant'
+
 function App() {
+  const [view, setView] = useState<View>('catalog')
   const [products, setProducts] = useState<Product[]>([])
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -141,7 +155,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-6 py-4 2xl:px-10">
           <div className="flex items-center gap-2.5">
@@ -153,11 +167,33 @@ function App() {
               <p className="text-xs text-muted-foreground">Product catalog</p>
             </div>
           </div>
+
+          <nav className="flex items-center gap-1 rounded-lg border bg-muted/50 p-1">
+            <Button
+              type="button"
+              variant={view === 'catalog' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('catalog')}
+            >
+              <ShoppingBasket /> Catalog
+            </Button>
+            <Button
+              type="button"
+              variant={view === 'assistant' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('assistant')}
+            >
+              <Sparkles /> Assistant
+            </Button>
+          </nav>
+
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button onClick={openAddForm}>
-              <Plus /> Add product
-            </Button>
+            {view === 'catalog' && (
+              <Button onClick={openAddForm}>
+                <Plus /> Add product
+              </Button>
+            )}
             {user ? (
               <div className="flex items-center gap-2 pl-1">
                 <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
@@ -176,7 +212,17 @@ function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] px-6 py-8 2xl:px-10">
+      <main
+        className={
+          view === 'assistant'
+            ? 'mx-auto flex w-full max-w-[1600px] flex-1 flex-col overflow-hidden px-6 py-8 2xl:px-10'
+            : 'mx-auto max-w-[1600px] px-6 py-8 2xl:px-10'
+        }
+      >
+        {view === 'assistant' && <ChatPage />}
+
+        {view === 'catalog' && (
+        <>
         <div className="mb-6 flex flex-wrap items-end gap-3 border-b pb-6">
           <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
             <Label htmlFor="filter-search" className="text-xs text-muted-foreground">
@@ -312,15 +358,6 @@ function App() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={authOpen} onOpenChange={setAuthOpen}>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Sign in</DialogTitle>
-            </DialogHeader>
-            <AuthForm onSuccess={handleAuthSuccess} />
-          </DialogContent>
-        </Dialog>
-
         <AlertDialog open={deletingProduct !== null} onOpenChange={(open) => !open && setDeletingProduct(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -337,8 +374,18 @@ function App() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </>
+        )}
+
+        <Dialog open={authOpen} onOpenChange={setAuthOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Sign in</DialogTitle>
+            </DialogHeader>
+            <AuthForm onSuccess={handleAuthSuccess} />
+          </DialogContent>
+        </Dialog>
       </main>
-      <ChatWidget />
     </div>
   )
 }

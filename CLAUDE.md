@@ -17,12 +17,18 @@ job (pytest, against a real Postgres service container) and a
 `frontend-checks` job (`npm run build` + `npm run lint`); the `deploy` job
 only runs if both pass. See `MAP.md`'s item 2 log for how this is wired.
 
-Three other docs exist and should be checked rather than duplicated here:
+Four other docs exist and should be checked rather than duplicated here:
 - `README.md` — features and tech stack (what the app does)
 - `GUIDE.md` — full setup/deployment steps, environment variable reference,
   backup/restore procedure, and a troubleshooting section with real gotchas
   hit while building this (localhost/IPv6 healthcheck bug, DNS caching,
   Elastic IP checklist)
+- `LOCAL_DEV.md` — the local-only dev workflow (db + backend in Docker,
+  frontend via Vite's dev server, skipping `web`/`certbot`/`prometheus`/
+  `grafana` entirely) and day-to-day commands (start/stop/restart/logs).
+  Note this working directory being "the production server" (below) does
+  *not* apply to a separate local clone — this file is what a local
+  checkout should follow instead.
 - `MAP.md` — a tracked roadmap/log of DevOps hardening work in progress.
   **Check this first** when resuming work here — it records what's done,
   what's next, and why, in order.

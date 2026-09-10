@@ -48,14 +48,15 @@
 
 ## Local run
 
-```bash
-cp .env.example .env   # adjust values if needed
-docker compose up -d --build
-```
-
-- App: http://localhost/
-- API health: http://localhost/api/health
-- Products API: http://localhost/api/products
+**Note:** `docker compose up -d --build` (the full stack, as run in
+production) does not work on a fresh local clone —
+`frontend/nginx/conf.d/app.conf` is baked into the `web` image at build
+time and hardcodes the production domain plus `443 ssl` cert paths that
+only exist on the EC2 box's `certbot/conf` volume, so Nginx fails to
+start without them. For local development, see **`LOCAL_DEV.md`** —it
+covers running just `db` + `backend` in Docker with the frontend on
+Vite's own dev server instead, plus day-to-day commands
+(start/stop/restart/logs).
 
 ## Database migrations
 

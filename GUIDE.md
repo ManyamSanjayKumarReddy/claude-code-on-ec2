@@ -230,8 +230,13 @@ starter queries, as **Time series** panels unless noted:
 4. **DNS**: at your registrar, add an A record for your (sub)domain pointing
    at the instance's public IPv4. Confirm it resolves before continuing
    (`dig +short A your.domain.com`).
-5. **First boot over plain HTTP** (no cert yet — `frontend/nginx/conf.d/app.conf`
-   should have only a `listen 80` server at this point):
+5. **First boot over plain HTTP** (no cert yet). **Important:** the
+   `frontend/nginx/conf.d/app.conf` committed in this repo *already*
+   contains the `443 ssl` server block from when HTTPS was first set up —
+   it is not HTTP-only. On a brand-new instance there's no cert on disk
+   yet, so Nginx will fail to start if you build it as-is. Temporarily
+   comment out/delete the `443 ssl` server block locally on the new box
+   (don't commit that change), leaving only the `listen 80` block, then:
    ```bash
    docker compose up -d --build
    ```
@@ -241,11 +246,12 @@ starter queries, as **Time series** panels unless noted:
      --webroot -w /var/www/certbot -d your.domain.com \
      --email you@example.com --agree-tos --no-eff-email --non-interactive
    ```
-7. **Enable HTTPS**: add a `listen 443 ssl` server block to
-   `frontend/nginx/conf.d/app.conf` referencing
-   `/etc/letsencrypt/live/your.domain.com/{fullchain,privkey}.pem`, and turn
-   the port-80 server into a redirect-to-https (keeping the
-   `/.well-known/acme-challenge/` location for renewals). Then:
+7. **Enable HTTPS**: restore the `443 ssl` server block you removed in step
+   5 (referencing `/etc/letsencrypt/live/your.domain.com/{fullchain,privkey}.pem`),
+   with the port-80 server as a redirect-to-https (keeping the
+   `/.well-known/acme-challenge/` location for renewals) — this matches
+   what's already committed in `app.conf`, so a plain `git checkout` of
+   that file restores it. Then:
    ```bash
    docker compose up -d --build web
    ```
@@ -263,12 +269,59 @@ it's attached to a *stopped* one — trivial for occasional overnight stops,
 but worth knowing.
 
 If this Elastic IP is ever released and a new one associated instead
-(or if you're setting this up fresh), update it in **all** of these places
-— it's easy to only remember the obvious one:
+(or if you're setting this up fresh), update it in these places — it's
+easy to only remember the obvious one:
 - The DNS A record at your registrar
-- `.env`'s `ALLOWED_ORIGINS`
 - The `EC2_HOST` GitHub Actions secret (used by the CI/CD deploy workflow) —
   easy to forget since it's not in any file in this repo
+
+(`.env`'s `ALLOWED_ORIGINS` is set to the **domain**, not the IP — it does
+*not* need to change just because the IP behind that domain changes, only
+if the domain itself changes.)
+
+## Migrating to a new AWS account/instance
+
+Relevant when moving off the current instance entirely (e.g. its AWS
+account's credits ran out) rather than just a stop/start. There's no
+Terraform yet (`MAP.md` item 6), so none of this is a button press —
+follow "Deploying to a fresh EC2 instance" above on the new box, plus:
+
+**Needs genuinely new values:**
+- A new Elastic IP, allocated + associated in the new account (see
+  "Elastic IP" above)
+- The DNS A record, repointed at that new Elastic IP
+- New SSH keypairs — old ones don't exist in a new AWS account: one
+  deploy-only key restricted server-side to only run `deploy.sh` (see the
+  CI/CD note in `CLAUDE.md`'s architecture notes — the forced `command=`
+  restriction lives in `~/.ssh/authorized_keys`, not in this repo, so it
+  has to be redone by hand), and one personal key for your own SSH/tunnel
+  access
+- The `EC2_HOST` and `EC2_SSH_KEY` GitHub Actions secrets, updated to the
+  new IP and new deploy private key (`EC2_USER` stays the same, e.g.
+  `ubuntu`, if using the same AMI family)
+- The TLS certificate — lives on the `certbot/conf` volume (host disk,
+  git-ignored), so it has to be reissued fresh; see steps 5–7 above,
+  including the note about temporarily stripping the `443` block back out
+  before first boot
+- The security group (22/80/443 inbound rules), recreated in the new
+  account
+- The cron backup job (not in git — re-add per "Database backups" above)
+- The database: either start empty, or restore the latest backup from R2
+  onto the new instance (see "Database backups" → "Restoring a backup"
+  above) — R2/Cloudflare is independent of the AWS account, so the
+  backups themselves are unaffected by this migration
+
+**Carries over unchanged, nothing to do:**
+- The domain, and `.env`'s `ALLOWED_ORIGINS` (see the Elastic IP note above)
+- GHCR images — `docker compose pull` just works once Docker + `.env` are
+  set up, independent of AWS account
+- The R2 backup bucket and its credentials
+- Better Stack uptime monitors — they watch the domain URL, not the
+  instance, so they resume passing once DNS repoints. Expect alert noise
+  during the cutover window itself (the site is genuinely down between
+  DNS repointing and the new instance being fully up), same caveat as the
+  deploy-overlap false start noted in `MAP.md` item 3's log.
+- All application code/config already committed to this repo
 
 ## Troubleshooting notes
 
